@@ -1,0 +1,182 @@
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no" />
+  <title>Purge Options – Stream Layer Demo</title>
+
+  <!-- Load Calcite Components-->
+  <script type="module" src="https://js.arcgis.com/calcite-components/2.11.1/calcite.esm.js"></script>
+  <link rel="stylesheet" type="text/css" href="https://js.arcgis.com/calcite-components/2.11.1/calcite.css" />
+
+  <!-- Load the ArcGIS Maps SDK for JavaScript -->
+  <link rel="stylesheet" href="https://js.arcgis.com/4.30/esri/themes/light/main.css" />
+  <script src="https://js.arcgis.com/4.30/"></script>
+
+  <!-- Load the Map components -->
+  <script type="module" src="https://js.arcgis.com/map-components/4.30/arcgis-map-components.esm.js"></script>
+
+  <style>
+    html,
+    body,
+    arcgis-map {
+      width: 100%;
+      height: 100%;
+      margin: 0px;
+      padding: 0px;
+    }
+
+    calcite-card {
+      border: 2px solid gray;
+      border-radius: 5px;
+      height: 300px;
+      width: 250px;
+    }
+  </style>
+  <script>
+    require([
+      'esri/portal/Portal',
+      'esri/identity/OAuthInfo',
+      'esri/identity/IdentityManager',
+      'esri/core/reactiveUtils',
+    ], (Portal, OAuthInfo, esriId, reactiveUtils) => {
+
+      // webmap url
+      // https://ps-iot.maps.arcgis.com/apps/mapviewer/index.html?webmap=c4cd2fda94a241a1a4b62b4da105aa8f
+
+      const signInButton = document.getElementById('sign-in-button');
+      const navLogo = document.getElementById('nav-logo');
+      const navigationUser = document.getElementById('nav-user');
+      const arcgisMap = document.querySelector('arcgis-map');
+      signInButton.addEventListener('click', signInOrOut);
+      navigationUser.addEventListener('click', signInOrOut);
+
+      arcgisMap.addEventListener('arcgisViewReadyChange', async (event) => {
+        await reactiveUtils.whenOnce(() => !arcgisMap.view.updating);
+
+        // #region Get handles on layers and views
+        // get handle on layer
+        const layer = arcgisMap.map.layers.find((layer) => {
+          return layer.title === 'Vehicles';
+        });
+
+        // get handle on layer view
+        const layerView = arcgisMap.view.layerViews.find(
+          (layerView) => {
+            return layerView.layer.title === 'Vehicles';
+          }
+        );
+
+        window.map = arcgisMap.map;
+        window.view = arcgisMap.view;
+        window.layer = layer;
+        window.layerView = layerView;
+        // #endregion
+
+
+        // #region Purge Options
+
+        // layer.purgeOptions.maxObservations = 999;
+
+        // layer.purgeOptions.ageReceived = .1;
+
+        // layer.purgeOptions.displayCount = 10;
+
+        // #endregion
+
+      });
+
+      // #region Authentication Logic
+      //Create a new OAuthInfo object.
+      const info = new OAuthInfo({
+        appId: 'HQwWKnU0S7G7xRH4',
+      });
+
+      // Add the OAuthInfo to the IdentityManager.
+      esriId.registerOAuthInfos([info]);
+
+      // Call the checkSignIn function to see if the user is already signed in.
+      checkSignIn();
+
+      // Function to check the current sign in status and query the portal if signed in.
+      function checkSignIn() {
+        esriId
+          .checkSignInStatus(info.portalUrl + '/sharing')
+          .then(() => {
+            // If signed in, show the username in the UI.
+            navigationUser.hidden = false;
+            signInButton.hidden = true;
+            const portal = new Portal({
+              authMode: 'immediate',
+            });
+            // Check if using a portal other than ArcGIS Online.
+            if (info.portalUrl !== 'https://www.arcgis.com') {
+              portal.url = info.portalUrl;
+            }
+            // Load the portal, display the name and username, then call the query items function.
+            portal.load().then(() => {
+              navigationUser.fullName = portal.user.fullName;
+              navigationUser.username = portal.user.username;
+              navLogo.description =
+                'Gallery of queried portal items displayed below. To sign out, click on the logged in user button.';
+            });
+          })
+          .catch(() => {
+            // If not signed in, then show the sign in button.
+            signInButton.hidden = false;
+            navigationUser.hidden = true;
+            navLogo.description =
+              'Use OAuth to log in to an ArcGIS Organization to view your items.';
+          });
+      }
+
+      // Function to sign in or out of the portal used by the sign in/out button click event.
+      function signInOrOut() {
+        esriId
+          .checkSignInStatus(info.portalUrl + '/sharing')
+          .then(() => {
+            // If already signed in, then destroy the credentials to sign out.
+            esriId.destroyCredentials();
+            window.location.reload();
+          })
+          .catch(() => {
+            // If the user is not signed in, generate a new credential.
+            esriId
+              .getCredential(info.portalUrl + '/sharing', {
+                // Set the following property to false to not show a dialog
+                // before the OAuth popup window is open.
+                //oAuthPopupConfirmation: false,
+              })
+              .then(() => {
+                // Once a credential is returned from the promise, check the
+                // sign in status to query the portal for items.
+                checkSignIn();
+              });
+          });
+      }
+      // #endregion
+    });
+  </script>
+</head>
+
+<body>
+  <calcite-shell>
+    <calcite-navigation slot="header">
+      <calcite-navigation-logo id="nav-logo" slot="logo" heading="Access ArcGIS portal items using OAuth 2.0"
+        description="Use OAuth to log in to an ArcGIS Organization to view your items."></calcite-navigation-logo>
+      <calcite-button id="sign-in-button" slot="user">Sign in</calcite-button>
+      <calcite-navigation-user hidden id="nav-user" slot="user">
+      </calcite-navigation-user>
+    </calcite-navigation>
+    <calcite-panel>
+      <arcgis-map item-id="7db81aff2d634e5dba517091e827b95c">
+        <arcgis-expand position="top-right">
+          <arcgis-search></arcgis-search>
+        </arcgis-expand>
+        <arcgis-legend position="bottom-left"></arcgis-legend>
+      </arcgis-map>
+    </calcite-panel>
+  </calcite-shell>
+</body>
+
+</html>
