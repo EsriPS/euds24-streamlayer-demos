@@ -41,7 +41,6 @@
       'esri/core/reactiveUtils',
       'esri/geometry/geometryEngine',
     ], (Portal, OAuthInfo, esriId, reactiveUtils, geometryEngine) => {
-
       // webmap url
       // https://ps-iot.maps.arcgis.com/apps/mapviewer/index.html?webmap=c4cd2fda94a241a1a4b62b4da105aa8f
 
@@ -80,16 +79,15 @@
           );
         });
 
+        // dronesLayer.purgeOptions.maxObservations = 3;
+
+        // Stash global variables for easy debugging
         window.map = arcgisMap.map;
         window.view = arcgisMap.view;
         window.dronesLayer = dronesLayer;
         window.dronesLayerView = dronesLayerView;
         window.zonesLayer = zonesLayer;
         window.zonesLayerView = zonesLayerView;
-        window.allDronesGeometry = null;
-
-        console.log('drones: ', dronesLayer);
-        console.log('zones: ', zonesLayer);
         // #endregion
 
         // #region Apply drones feature effect
@@ -114,25 +112,14 @@
         // #endregion
 
         // #region Apply zones feature effect
-        //
-        // WIP – Trying to get zones to highlight when drones are in them
-        //
-
-        // get all points from dronesLayer and create a multiploint geometry
-        const dronesQuery = dronesLayer.createQuery();
-        const dronesQueryResults = await dronesLayerView.queryFeatures(
-          dronesQuery
-        );
-
-        window.allDronesGeometry =
-          dronesQueryResults.features.length &&
-          geometryEngine.union(
-            dronesQueryResults.features.map((feature) => feature.geometry)
+        const updateDronesQueryResults = async () => {
+          // get all points from dronesLayer and create a multiploint geometry
+          const dronesQuery = dronesLayer.createQuery();
+          const dronesQueryResults = await dronesLayerView.queryFeatures(
+            dronesQuery
           );
 
-        const updateDronesQueryResults = async () => {
-          const dronesQueryResults = await dronesLayerView.queryFeatures(dronesQuery);
-          window.allDronesGeometry =
+          const allDronesGeometry =
             dronesQueryResults.features.length &&
             geometryEngine.union(
               dronesQueryResults.features.map((feature) => feature.geometry)
@@ -145,20 +132,21 @@
             units: 'meters',
           };
 
-          zonesLayerView.featureEffect = {
-            filter: zonesFeatureFilter,
-            includedEffect: 'bloom(1.5, 0.5px, 0.1)',
-          };
-        }
+          if (allDronesGeometry) {
+            zonesLayerView.featureEffect = {
+              filter: zonesFeatureFilter,
+              includedEffect: 'hue-rotate(180deg)',
+            };
+          }
+        };
 
-        window.updateZones = updateDronesQueryResults;
-
-        // setInterval(() => {
-        //   updateDronesQueryResults();
-        // }, 1000);
+        dronesLayerView.on('data-received', (event) => {
+          updateDronesQueryResults();
+        });
         // #endregion
-
       });
+
+
 
       // #region Authentication Logic
       //Create a new OAuthInfo object.
@@ -191,16 +179,12 @@
             portal.load().then(() => {
               navigationUser.fullName = portal.user.fullName;
               navigationUser.username = portal.user.username;
-              navLogo.description =
-                'Gallery of queried portal items displayed below. To sign out, click on the logged in user button.';
             });
           })
           .catch(() => {
             // If not signed in, then show the sign in button.
             signInButton.hidden = false;
             navigationUser.hidden = true;
-            navLogo.description =
-              'Use OAuth to log in to an ArcGIS Organization to view your items.';
           });
       }
 
@@ -236,8 +220,8 @@
 <body>
   <calcite-shell>
     <calcite-navigation slot="header">
-      <calcite-navigation-logo id="nav-logo" slot="logo" heading="Access ArcGIS portal items using OAuth 2.0"
-        description="Use OAuth to log in to an ArcGIS Organization to view your items."></calcite-navigation-logo>
+      <calcite-navigation-logo id="nav-logo" slot="logo" heading="Stream Layer – Feature Effects"
+        description="Drone Delivery"></calcite-navigation-logo>
       <calcite-button id="sign-in-button" slot="user">Sign in</calcite-button>
       <calcite-navigation-user hidden id="nav-user" slot="user">
       </calcite-navigation-user>
@@ -247,7 +231,9 @@
         <arcgis-expand position="top-right">
           <arcgis-search></arcgis-search>
         </arcgis-expand>
-        <arcgis-legend position="bottom-left"></arcgis-legend>
+        <arcgis-expand position="top-right">
+          <arcgis-legend position="bottom-left"></arcgis-legend>
+        </arcgis-expand>
       </arcgis-map>
     </calcite-panel>
   </calcite-shell>

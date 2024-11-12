@@ -6,15 +6,15 @@
   <title>Purge Options – Stream Layer Demo</title>
 
   <!-- Load Calcite Components-->
-  <script type="module" src="https://js.arcgis.com/calcite-components/2.11.1/calcite.esm.js"></script>
-  <link rel="stylesheet" type="text/css" href="https://js.arcgis.com/calcite-components/2.11.1/calcite.css" />
+  <script type="module" src="https://js.arcgis.com/calcite-components/2.13.0/calcite.esm.js"></script>
+  <link rel="stylesheet" type="text/css" href="https://js.arcgis.com/calcite-components/2.13.0/calcite.css" />
 
   <!-- Load the ArcGIS Maps SDK for JavaScript -->
-  <link rel="stylesheet" href="https://js.arcgis.com/4.30/esri/themes/light/main.css" />
+  <link rel="stylesheet" href="https://js.arcgis.com/4.31/esri/themes/light/main.css" />
   <script src="https://js.arcgis.com/4.30/"></script>
 
   <!-- Load the Map components -->
-  <script type="module" src="https://js.arcgis.com/map-components/4.30/arcgis-map-components.esm.js"></script>
+  <script type="module" src="https://js.arcgis.com/map-components/4.31/arcgis-map-components.esm.js"></script>
 
   <style>
     html,
@@ -26,11 +26,22 @@
       padding: 0px;
     }
 
-    calcite-card {
-      border: 2px solid gray;
-      border-radius: 5px;
-      height: 300px;
-      width: 250px;
+    calcite-button {
+      height: 3rem;
+      width: 100%;
+    }
+
+    .form-header {
+      font-size: 1.5rem;
+      font-weight: bold;
+      margin-bottom: 1.5rem;
+    }
+
+    .form-panel {
+      padding: 20px;
+      width: 400px;
+      background-color: white;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
   </style>
   <script>
@@ -75,9 +86,28 @@
 
 
         // #region Purge Options
+        document.getElementById('updatePurgeOptions').addEventListener('click', () => {
+          const ageInput = document.getElementById('ageInput').value;
+          const maxObservationsInput = document.getElementById('maxObservationsInput').value;
+          const displayCountInput = document.getElementById('displayCountInput').value;
+
+          if (ageInput) {
+            // layer.purgeOptions.age = parseFloat(ageInput);
+            layer.purgeOptions.ageReceived = parseFloat(ageInput);
+          }
+
+          if (maxObservationsInput) {
+            layer.purgeOptions.maxObservations = parseInt(maxObservationsInput, 10);
+          }
+
+          if (displayCountInput) {
+            layer.purgeOptions.displayCount = parseInt(displayCountInput, 10);
+          }
+        });
 
         // layer.purgeOptions.maxObservations = 999;
 
+        // layer.purgeOptions.age = .1;
         // layer.purgeOptions.ageReceived = .1;
 
         // layer.purgeOptions.displayCount = 10;
@@ -117,16 +147,12 @@
             portal.load().then(() => {
               navigationUser.fullName = portal.user.fullName;
               navigationUser.username = portal.user.username;
-              navLogo.description =
-                'Gallery of queried portal items displayed below. To sign out, click on the logged in user button.';
             });
           })
           .catch(() => {
             // If not signed in, then show the sign in button.
             signInButton.hidden = false;
             navigationUser.hidden = true;
-            navLogo.description =
-              'Use OAuth to log in to an ArcGIS Organization to view your items.';
           });
       }
 
@@ -162,17 +188,33 @@
 <body>
   <calcite-shell>
     <calcite-navigation slot="header">
-      <calcite-navigation-logo id="nav-logo" slot="logo" heading="Access ArcGIS portal items using OAuth 2.0"
-        description="Use OAuth to log in to an ArcGIS Organization to view your items."></calcite-navigation-logo>
+      <calcite-navigation-logo id="nav-logo" slot="logo" heading="Stream Layer – Purge Options"
+        description="maxObservations | age | displayCount"></calcite-navigation-logo>
       <calcite-button id="sign-in-button" slot="user">Sign in</calcite-button>
       <calcite-navigation-user hidden id="nav-user" slot="user">
       </calcite-navigation-user>
     </calcite-navigation>
     <calcite-panel>
       <arcgis-map item-id="7db81aff2d634e5dba517091e827b95c">
-        <arcgis-expand position="top-right">
-          <arcgis-search></arcgis-search>
-        </arcgis-expand>
+        <arcgis-placement position="top-right">
+          <arcgis-panel class="form-panel">
+            <div class="form-header">Purge Options:</div>
+            <calcite-label scale="l">
+              <code>maxObservations</code>
+              <calcite-input id="maxObservationsInput" placeholder="Max # of observations" scale="l"></calcite-input>
+            </calcite-label>
+            <calcite-label scale="l">
+              <code>age / ageReceived</code>
+              <calcite-input id="ageInput" placeholder="Max age in minutes" scale="l"></calcite-input>
+            </calcite-label>
+            <calcite-label scale="l">
+              <code>displayCount</code>
+              <calcite-input id="displayCountInput" placeholder="Max # of features" scale="l"></calcite-input>
+            </calcite-label>
+            <calcite-button id="updatePurgeOptions" scale="l">Update</calcite-button>
+
+          </arcgis-panel>
+        </arcgis-placement>
         <arcgis-legend position="bottom-left"></arcgis-legend>
       </arcgis-map>
     </calcite-panel>

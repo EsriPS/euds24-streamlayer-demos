@@ -35,7 +35,7 @@ function formatTimestamp(date) {
 
 function generateTimestamp(baseTime, offsetSeconds) {
   const date = new Date(baseTime.getTime() + offsetSeconds * 1000);
-  return formatTimestamp(date);
+  return date.getTime(); // Return epoch milliseconds
 }
 
 function interpolateLocation(start, end, fraction) {
