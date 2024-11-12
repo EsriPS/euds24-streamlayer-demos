@@ -6,15 +6,19 @@
   <title>Stream Layer Demo</title>
 
   <!-- Load Calcite Components-->
-  <script type="module" src="https://js.arcgis.com/calcite-components/2.11.1/calcite.esm.js"></script>
-  <link rel="stylesheet" type="text/css" href="https://js.arcgis.com/calcite-components/2.11.1/calcite.css" />
+  <script type="module" src="https://js.arcgis.com/calcite-components/2.13.2/calcite.esm.js"></script>
+  <link rel="stylesheet" type="text/css" href="https://js.arcgis.com/calcite-components/2.13.2/calcite.css" />
 
   <!-- Load the ArcGIS Maps SDK for JavaScript -->
-  <link rel="stylesheet" href="https://js.arcgis.com/4.30/esri/themes/light/main.css" />
-  <script src="https://js.arcgis.com/4.30/"></script>
+  <link rel="stylesheet" href="https://js.arcgis.com/4.31/esri/themes/light/main.css" />
+  <script src="https://js.arcgis.com/4.31/"></script>
 
   <!-- Load the Map components -->
-  <script type="module" src="https://js.arcgis.com/map-components/4.30/arcgis-map-components.esm.js"></script>
+  <script type="module" src="https://js.arcgis.com/map-components/4.31/arcgis-map-components.esm.js"></script>
+  <!-- Load the Coding Components -->
+  <link rel="stylesheet" type="text/css"
+    href="https://js.arcgis.com/coding-components/4.31/arcgis-coding-components.css" />
+  <script type="module" src="https://js.arcgis.com/coding-components/4.31/arcgis-coding-components.esm.js"></script>
 
   <style>
     html,
@@ -31,6 +35,11 @@
       border-radius: 5px;
       height: 300px;
       width: 250px;
+    }
+
+    arcgis-code-editor {
+      display: block;
+      height: 500px;
     }
   </style>
   <script>
@@ -78,8 +87,6 @@
             layerView.layer.title === 'Hubschrauberlandeplatzzonen (1000m)'
           );
         });
-
-        // dronesLayer.purgeOptions.maxObservations = 3;
 
         // Stash global variables for easy debugging
         window.map = arcgisMap.map;
@@ -146,8 +153,6 @@
         // #endregion
       });
 
-
-
       // #region Authentication Logic
       //Create a new OAuthInfo object.
       const info = new OAuthInfo({
@@ -213,6 +218,13 @@
           });
       }
       // #endregion
+
+      // #region Increase font size of code editor
+      const codeEditors = document.querySelectorAll('arcgis-code-editor');
+      codeEditors.forEach((codeEditor) => {
+        codeEditor.editorOptions = { fontSize: 18 };
+      });
+      // #endregion
     });
   </script>
 </head>
@@ -222,6 +234,12 @@
     <calcite-navigation slot="header">
       <calcite-navigation-logo id="nav-logo" slot="logo" heading="Stream Layer – Feature Effects"
         description="Drone Delivery"></calcite-navigation-logo>
+      <calcite-action-pad layout="horizontal" expand-disabled slot="content-end">
+        <calcite-action id="toggle-modal" text="Code Snippets" icon="code"></calcite-action>
+      </calcite-action-pad>
+      <calcite-tooltip placement="bottom" reference-element="toggle-modal" close-on-click slot="content-end">
+        Code Snippets
+      </calcite-tooltip>
       <calcite-button id="sign-in-button" slot="user">Sign in</calcite-button>
       <calcite-navigation-user hidden id="nav-user" slot="user">
       </calcite-navigation-user>
@@ -237,6 +255,88 @@
       </arcgis-map>
     </calcite-panel>
   </calcite-shell>
+
+  <!-- Demo template interactive elements -->
+  <calcite-modal id="modal" width-scale="l" class="calcite-mode-light">
+    <div slot="header">Feature Effect Code Snippets</div>
+    <div slot="content">
+      <calcite-accordion selection-mode="single" scale="l">
+        <calcite-accordion-item heading="1. Apply a Feature Effect on the Drones" icon-start="code">
+          <arcgis-code-editor language="javascript" value="// Get all restricted zone polygons
+const zonesQuery = zonesLayer.createQuery();
+const zonesQueryResults = await zonesLayer.queryFeatures(zonesQuery);
+
+// Create a union of these geometries
+const allZonesGeometry = geometryEngine.union(
+  zonesQueryResults.features.map((feature) => feature.geometry)
+);
+
+// Create a Feature Filter where the drones intersect the restricted zones
+const dronesFeatureFilter = {
+  geometry: allZonesGeometry,
+  spatialRelationship: 'intersects',
+  distance: 0,
+  units: 'meters',
+};
+
+// Apply a feature effect to the drones layer view
+dronesLayerView.featureEffect = {
+  filter: dronesFeatureFilter,
+  includedEffect: 'bloom(1.5, 0.5px, 0.1)',
+};"></arcgis-code-editor>
+        </calcite-accordion-item>
+        <calcite-accordion-item heading="2. Apply a Feature Effect on the Restriction Zones" icon-start="code">
+          <arcgis-code-editor language="javascript" value="const updateDronesQueryResults = async () => {
+// Get all the drone points
+const dronesQuery = dronesLayer.createQuery();
+const dronesQueryResults = await dronesLayerView.queryFeatures(
+  dronesQuery
+);
+
+// create a multiploint geometry
+const allDronesGeometry =
+  dronesQueryResults.features.length &&
+  geometryEngine.union(
+    dronesQueryResults.features.map((feature) => feature.geometry)
+  );
+
+// Create a Feature Filter where the drones intersect the restricted zones
+const zonesFeatureFilter = {
+  geometry: allDronesGeometry,
+  spatialRelationship: 'intersects',
+  distance: 0,
+  units: 'meters',
+};
+
+// Apply a feature effect to the zones layer view
+if (allDronesGeometry) {
+  zonesLayerView.featureEffect = {
+    filter: zonesFeatureFilter,
+    includedEffect: 'hue-rotate(180deg)',
+  };
+}
+};
+
+// Update the zones feature effect when the drones layer view receives data!
+dronesLayerView.on('data-received', (event) => {
+  updateDronesQueryResults();
+});
+  "></arcgis-code-editor>
+        </calcite-accordion-item>
+      </calcite-accordion>
+    </div>
+  </calcite-modal>
 </body>
+
+<script>
+  const toggleModalEl = document.getElementById('toggle-modal');
+  const modalEl = document.getElementById('modal');
+
+  toggleModalEl.addEventListener('click', () => handleModalChange());
+
+  function handleModalChange() {
+    modalEl.open = !modalEl.open;
+  }
+</script>
 
 </html>
